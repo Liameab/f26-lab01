@@ -29,16 +29,18 @@ See the Lab 1 handout on the course page for the three milestones you show a TA.
 ## 工具与模型声明
 
 - 工具：Claude Code（命令行）；IDE：VS Code
-- 模型：Claude Code 会话中实际使用的模型（按你机器上的会话填写）
+- 模型：deepseek-flash（Claude Code 配置的会话模型）
 
 ## 拓展 3：让智能体审查智能体
 
-把 `changes/agent-attempt.patch` 直接丢给智能体、只问“这个 diff 有问题吗”，它多半回答
-“看起来没问题，能通过测试”。换成明确指向不变式的问法——“审查这个 diff 是否违背
-`ARCHITECTURE.md` 中的不变式，注意 `overlaps` 是冲突规则的唯一所在”——它才指出
-`isAvailable` 自己重写了判断、且只看已有预订的起点，因此 `[570,630)` 这类“先开始、
-延伸进查询区间”的预订会被误判为可用。结论：提示词里给出**要对照的规约**，审查才有效；
-泛泛地问“有没有问题”，得到的往往是确认偏误。
+把 `changes/agent-attempt.patch` 交给 Claude Code，并按指导书提示它“审查这个 diff 是否违背
+`ARCHITECTURE.md` 中的不变式”。它的回答切中要害：`isAvailable` 没有复用 `overlaps`，
+而是自己内联重写了一份判断——而且写错了，`[570,630)`、`[540,720)` 这类“已有预订先开始、
+延伸进查询区间”的情况会被误判为可用。它还区分了两层：**状态层**没有当场破坏不变式
+（`isAvailable` 是只读查询，`book()` 自己仍用 `overlaps` 兜底），但**保护层**已经违背
+承诺——javadoc 明确邀请调用者“先查可用性再预订”，一旦有人照做就会真的落下重叠预订。
+把问法收窄到“是否违背不变式、是否复用唯一规则”之后，它没有停在“能通过测试”，而是给出了
+可验证的具体反例；泛泛地问“这个 diff 有问题吗”，得到的往往是确认偏误。
 
 ## 拓展 4：“先查询再预订”的隐患（TOCTOU）
 
