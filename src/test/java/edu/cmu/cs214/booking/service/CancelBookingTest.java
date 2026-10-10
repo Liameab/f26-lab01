@@ -9,6 +9,7 @@ import edu.cmu.cs214.booking.domain.Room;
 import edu.cmu.cs214.booking.domain.TimeInterval;
 import edu.cmu.cs214.booking.domain.User;
 import edu.cmu.cs214.booking.repo.InMemoryBookingStore;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class CancelBookingTest {
@@ -52,5 +53,22 @@ class CancelBookingTest {
 
         assertEquals(1, svc.listBookings(roomA).size());
         assertEquals(1, store.waitlistForRoom(roomA).size());
+    }
+
+    /** S3: cancelling promotes the waiting user whose slot is now free. */
+    @Test
+    void cancellingPromotesTheWaitlistedUser() {
+        newService();
+        Booking a = confirmed(svc.book(roomA, alice, new TimeInterval(600, 660)));
+        assertInstanceOf(BookingResult.Waitlisted.class,
+                svc.book(roomA, bob, new TimeInterval(630, 700)));
+
+        svc.cancelBooking(a.id());
+
+        List<Booking> bookings = svc.listBookings(roomA);
+        assertEquals(1, bookings.size());
+        assertEquals(bob, bookings.get(0).user());
+        assertEquals(new TimeInterval(630, 700), bookings.get(0).interval());
+        assertTrue(store.waitlistForRoom(roomA).isEmpty());
     }
 }

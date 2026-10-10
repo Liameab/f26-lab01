@@ -6,7 +6,10 @@ import edu.cmu.cs214.booking.domain.TimeInterval;
 import edu.cmu.cs214.booking.domain.User;
 import edu.cmu.cs214.booking.domain.WaitlistEntry;
 import edu.cmu.cs214.booking.repo.BookingStore;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Coordinates bookings and the waitlist. Enforces the core invariant: a room
@@ -49,12 +52,30 @@ public class BookingService {
 
     /**
      * Cancels the confirmed booking with {@code bookingId}, freeing its slot. If no
-     * booking has that id, does nothing.
+     * booking has that id, does nothing. Otherwise the earliest-waiting user for that
+     * room whose interval no longer overlaps a remaining confirmed booking is
+     * promoted (first-come-first-served, at most one promotion per cancellation).
      */
     public void cancelBooking(String bookingId) {
-        if (store.findBooking(bookingId).isEmpty()) {
+        Optional<Booking> cancelled = store.findBooking(bookingId);
+        if (cancelled.isEmpty()) {
             return;
         }
+        Room room = cancelled.get().room();
         store.removeBooking(bookingId);
+
+        List<WaitlistEntry> waiters = new ArrayList<>(store.waitlistForRoom(room));
+        waiters.sort(Comparator.comparingInt(WaitlistEntry::seq));
+        for (WaitlistEntry waiter : waiters) {
+            boolean stillConflicts = store.bookingsForRoom(room).stream()
+                    .anyMatch(b -> b.interval().overlaps(waiter.interval()));
+            if (stillConflicts) {
+                continue;
+            }
+            store.removeWaitlistEntry(waiter.id());
+            store.addBooking(
+                    new Booking("b" + nextBookingSeq++, room, waiter.user(), waiter.interval()));
+            return;
+        }
     }
 }
