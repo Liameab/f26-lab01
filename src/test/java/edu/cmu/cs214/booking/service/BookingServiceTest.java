@@ -2,6 +2,7 @@ package edu.cmu.cs214.booking.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static edu.cmu.cs214.booking.InvariantChecks.assertInvariantHolds;
 
 import edu.cmu.cs214.booking.domain.Room;
 import edu.cmu.cs214.booking.domain.TimeInterval;
@@ -16,8 +17,11 @@ class BookingServiceTest {
     private final User alice = new User("u1", "Alice");
     private final User bob = new User("u2", "Bob");
 
+    private InMemoryBookingStore store;
+
     private BookingService newService() {
-        return new BookingService(new InMemoryBookingStore());
+        store = new InMemoryBookingStore();
+        return new BookingService(store);
     }
 
     @Test
@@ -25,6 +29,7 @@ class BookingServiceTest {
         BookingService svc = newService();
         BookingResult r = svc.book(roomA, alice, new TimeInterval(600, 660));
         assertInstanceOf(BookingResult.Confirmed.class, r);
+        assertInvariantHolds(store, roomA, roomB);
     }
 
     @Test
@@ -33,6 +38,7 @@ class BookingServiceTest {
         svc.book(roomA, alice, new TimeInterval(600, 660));
         BookingResult r = svc.book(roomA, bob, new TimeInterval(630, 700));
         assertInstanceOf(BookingResult.Waitlisted.class, r);
+        assertInvariantHolds(store, roomA, roomB);
     }
 
     @Test
@@ -41,6 +47,7 @@ class BookingServiceTest {
         svc.book(roomA, alice, new TimeInterval(600, 660));
         BookingResult r = svc.book(roomA, bob, new TimeInterval(660, 720));
         assertInstanceOf(BookingResult.Confirmed.class, r);
+        assertInvariantHolds(store, roomA, roomB);
     }
 
     @Test
@@ -49,6 +56,7 @@ class BookingServiceTest {
         svc.book(roomA, alice, new TimeInterval(600, 660));
         BookingResult r = svc.book(roomB, bob, new TimeInterval(600, 660));
         assertInstanceOf(BookingResult.Confirmed.class, r);
+        assertInvariantHolds(store, roomA, roomB);
     }
 
     @Test
@@ -57,5 +65,6 @@ class BookingServiceTest {
         svc.book(roomA, alice, new TimeInterval(600, 660));
         svc.book(roomA, bob, new TimeInterval(660, 720));
         assertEquals(2, svc.listBookings(roomA).size());
+        assertInvariantHolds(store, roomA, roomB);
     }
 }

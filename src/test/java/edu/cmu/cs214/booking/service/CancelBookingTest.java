@@ -3,6 +3,7 @@ package edu.cmu.cs214.booking.service;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static edu.cmu.cs214.booking.InvariantChecks.assertInvariantHolds;
 
 import edu.cmu.cs214.booking.domain.Booking;
 import edu.cmu.cs214.booking.domain.Room;
@@ -43,6 +44,7 @@ class CancelBookingTest {
         svc.cancelBooking(a.id());
 
         assertTrue(svc.listBookings(roomA).isEmpty());
+        assertInvariantHolds(store, roomA, roomB);
     }
 
     /** S2: cancelling an unknown id changes nothing. */
@@ -57,6 +59,7 @@ class CancelBookingTest {
 
         assertEquals(1, svc.listBookings(roomA).size());
         assertEquals(1, store.waitlistForRoom(roomA).size());
+        assertInvariantHolds(store, roomA, roomB);
     }
 
     /** S3: cancelling promotes the waiting user whose slot is now free. */
@@ -74,6 +77,7 @@ class CancelBookingTest {
         assertEquals(bob, bookings.get(0).user());
         assertEquals(new TimeInterval(630, 700), bookings.get(0).interval());
         assertTrue(store.waitlistForRoom(roomA).isEmpty());
+        assertInvariantHolds(store, roomA, roomB);
     }
 
     /** S4: first-come-first-served, and at most one promotion per cancellation. */
@@ -94,6 +98,7 @@ class CancelBookingTest {
         List<WaitlistEntry> waiters = store.waitlistForRoom(roomA);
         assertEquals(1, waiters.size());
         assertEquals(carol, waiters.get(0).user());
+        assertInvariantHolds(store, roomA, roomB);
     }
 
     /** S5: skip a waiter whose interval still conflicts with another booking. */
@@ -116,6 +121,7 @@ class CancelBookingTest {
         List<WaitlistEntry> waiters = store.waitlistForRoom(roomA);
         assertEquals(1, waiters.size());
         assertEquals(bob, waiters.get(0).user());
+        assertInvariantHolds(store, roomA, roomB);
     }
 
     /** S6: promotion never crosses rooms. */
@@ -132,5 +138,6 @@ class CancelBookingTest {
         assertTrue(svc.listBookings(roomA).isEmpty());
         assertEquals(1, svc.listBookings(roomB).size());
         assertEquals(1, store.waitlistForRoom(roomB).size());
+        assertInvariantHolds(store, roomA, roomB);
     }
 }
